@@ -4,13 +4,13 @@ Self-contained cyclone forecast explorer with bounded map zoom, movable location
 
 ## Data-sharing status
 
-Google’s terms for real-time experimental data restrict public sharing of retrievable future forecasts. Public deployment does not establish redistribution rights. The current deployment workflow retains the previously supplied WNV3 data; do not replace it with a current/future FNV3P2 or OPER export on a public branch. A local-only build can use fresh data, or an eligible historical export can be published when all forecast valid times are at least one hour old under the linked September 2026 terms. The `--public` option enforces that age check. Retain source notices and attribution.
+Google’s terms for real-time experimental data restrict public sharing of retrievable future forecasts. Public deployment does not establish redistribution rights. The repository may contain supplied forecast data at the user’s direction; this does not resolve the previously identified sharing restriction. The `--public` option remains available for an age-gated build, but the current deployment workflow does not enable that gate. Retain source notices and attribution.
 
 ## Build
 
 Run `python3 scripts/build.py`, then open `site/index.html`. Python 3.9+ is sufficient; no third-party Python packages are required. All forecast data, geographic geometry and D3 are embedded, so the dashboard has no network dependency.
 
-The initial published forecast is AL092026, initialized 2026-10-09 00:00 UTC, with 64 ensemble members and 446 positions. The reference defaults to a public street-level point on Dawn Lane, not a house address. It can be moved or entered as coordinates.
+The current published forecast is AL092026, initialized 2026-10-09 06:00 UTC, using FNV3P2 with 50 ensemble members and 327 positions. The reference defaults to a public street-level point on Dawn Lane, not a house address. It can be moved or entered as coordinates.
 
 ## Repeatable updates
 
