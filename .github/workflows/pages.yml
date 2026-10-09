@@ -18,8 +18,10 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v6
+      - name: Test both ensemble sizes
+        run: python3 -m unittest discover -s scripts -p "test_*.py"
       - name: Validate data and build
-        run: python3 scripts/build.py
+        run: python3 scripts/build.py --model WNV3
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v4
         with:

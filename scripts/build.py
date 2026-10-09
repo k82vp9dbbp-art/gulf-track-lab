@@ -7,6 +7,11 @@ import math
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+MODEL_LABELS = {
+    "WNV3": "WeatherNext 3 Cyclones (WNV3)",
+    "FNV3P2": "WeatherNext 2 Cyclones (r2, FNV3P2)",
+    "OPER": "WeatherNext Cyclones Operational (OPER)",
+}
 FIELDS = ["lead_time_hours", "lon", "lat", "maximum_sustained_wind_speed_knots",
           "minimum_sea_level_pressure_hpa", "radius_of_maximum_winds_km"] + [
     f"radius_{w}_knot_winds_{q}_km" for w in (34, 50, 64) for q in ("ne", "se", "sw", "nw")]
@@ -15,7 +20,7 @@ def timestamp(value):
     result = dt.datetime.fromisoformat(value.strip().replace("Z", "+00:00"))
     return result.replace(tzinfo=dt.timezone.utc) if result.tzinfo is None else result
 
-def build(csv_path, storm, output, public):
+def build(csv_path, storm, output, public, model="auto"):
     with csv_path.open(encoding="utf-8-sig", newline="") as source:
         reader = csv.DictReader(line for line in source if line.strip() and not line.lstrip().startswith("#"))
         required = {"init_time", "track_id", "sample", "valid_time", *FIELDS}
@@ -45,18 +50,25 @@ def build(csv_path, storm, output, public):
         if any(p[0] == lead for p in tracks.setdefault(member, [])):
             raise ValueError("Duplicate forecast point")
         tracks[member].append(values)
-    if set(tracks) != {str(i) for i in range(64)} or any(len(t) < 2 for t in tracks.values()):
-        raise ValueError("Expected 64 ensemble tracks with at least two positions each")
+    member_count = len(tracks)
+    if member_count < 2 or set(tracks) != {str(i) for i in range(member_count)} or any(len(t) < 2 for t in tracks.values()):
+        raise ValueError("Expected at least two sequentially numbered ensemble tracks, each with two or more positions")
     for track in tracks.values():
         track.sort(key=lambda point: point[0])
     now = dt.datetime.now(dt.timezone.utc)
     latest = max(timestamp(row["valid_time"]) for row in rows)
-    # The supplied CSV header specifies 48 hours. Respect it conservatively,
-    # even though the currently linked terms state a shorter historical window.
-    if public and latest > now - dt.timedelta(hours=48):
+    # Linked Google terms (updated September 2026) define real-time as less than
+    # one hour old or future. Public builds must not expose that forecast data.
+    if public and latest > now - dt.timedelta(hours=1):
         raise ValueError("Public embedded-data publishing blocked: CSV includes recent/future data subject to controlled-sharing terms. See README.")
+    model_key = model.strip().upper()
+    if model_key == "AUTO":
+        model_key = csv_path.name.split("_", 1)[0].upper()
+    if model_key not in MODEL_LABELS and model_key != "LATEST.CSV":
+        raise ValueError(f"Unknown model {model_key}; select WNV3, FNV3P2 or OPER")
+    model_label = MODEL_LABELS.get(model_key, f"WeatherNext Cyclones ({member_count} members; model unspecified)")
     forecast = {"init": init.isoformat().replace("+00:00", "Z"), "storm": storm,
-                "label": "WeatherNext 3 Cyclones", "tracks": tracks}
+                "label": model_label, "model": model_key, "tracks": tracks}
     source = (ROOT / "assets/app-fragment.html").read_text()
     stamp = now.strftime("%Y-%m-%d %H:%M UTC")
     source = source.replace('<div class="gt-toolbar">',
@@ -68,7 +80,7 @@ def build(csv_path, storm, output, public):
     html = (ROOT / "assets/page-head.html").read_text() + source + "</main></body></html>"
     (output / "index.html").write_text(html)
     (output / ".nojekyll").touch()
-    print(f"Built {output / 'index.html'}: {len(tracks)} members, {len(rows)} positions, initialized {forecast['init']}")
+    print(f"Built {output / 'index.html'}: {model_label}, {member_count} members, {len(rows)} positions, initialized {forecast['init']}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -76,5 +88,7 @@ if __name__ == "__main__":
     parser.add_argument("--storm", default="AL092026")
     parser.add_argument("--output", type=Path, default=ROOT / "site")
     parser.add_argument("--public", action="store_true", help="Check historical-data eligibility before a public build")
+    parser.add_argument("--model", default="auto", choices=["auto", "WNV3", "FNV3P2", "OPER"],
+                        help="Forecast model identity; specify explicitly for data/latest.csv")
     args = parser.parse_args()
-    build(args.csv, args.storm, args.output, args.public)
+    build(args.csv, args.storm, args.output, args.public, args.model)

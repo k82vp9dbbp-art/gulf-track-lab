@@ -4,17 +4,17 @@ Self-contained cyclone forecast explorer with bounded map zoom, movable location
 
 ## Data-sharing status
 
-Google’s recent/future forecast sharing restriction remains unresolved. The owner requested public publication now and will address it separately. Public deployment does not establish permission to redistribute the embedded data. The deployment workflow validates and builds the supplied forecast without invoking the optional historical-data age check. Source CSV notices are retained.
+Google’s terms for real-time experimental data restrict public sharing of retrievable future forecasts. Public deployment does not establish redistribution rights. The current deployment workflow retains the previously supplied WNV3 data; do not replace it with a current/future FNV3P2 or OPER export on a public branch. A local-only build can use fresh data, or an eligible historical export can be published when all forecast valid times are at least one hour old under the linked September 2026 terms. The `--public` option enforces that age check. Retain source notices and attribution.
 
 ## Build
 
 Run `python3 scripts/build.py`, then open `site/index.html`. Python 3.9+ is sufficient; no third-party Python packages are required. All forecast data, geographic geometry and D3 are embedded, so the dashboard has no network dependency.
 
-The initial forecast is AL092026, initialized 2026-10-09 00:00 UTC, with 64 ensemble members and 446 positions. The reference defaults to a public street-level point on Dawn Lane, not a house address. It can be moved or entered as coordinates.
+The initial published forecast is AL092026, initialized 2026-10-09 00:00 UTC, with 64 ensemble members and 446 positions. The reference defaults to a public street-level point on Dawn Lane, not a house address. It can be moved or entered as coordinates.
 
 ## Repeatable updates
 
-Replace `data/latest.csv` with a newly validated WeatherNext Cyclones ensemble export and run the build script. It validates the field names, time consistency, numeric bounds, duplicate points and all 64 members before producing the dashboard. It records the build time; the dashboard displays forecast initialization separately.
+The build supports different ensemble sizes, including the 64-member WNV3 and 50-member FNV3P2 and OPER cyclone forecast products. It validates field names, time consistency, numeric bounds, unique points and sequential ensemble member IDs before producing the dashboard. Forecast model identity is explicit: `--model WNV3`, `--model FNV3P2`, or `--model OPER`. The filename can supply an identity when building a specifically named CSV locally, but `data/latest.csv` does not encode the model: update the workflow’s `--model` argument whenever you replace the forecast source. The model name, ensemble count and initialization are shown in the dashboard; the site build time is separate.
 
 Enable GitHub Pages with Source set to GitHub Actions. The included workflow builds and deploys on pushes to `main`. A failed data validation prevents deployment. Viewers reload the same link to see updates.
 
